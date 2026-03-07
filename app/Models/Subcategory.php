@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subcategory extends Model
 {
@@ -11,26 +13,17 @@ class Subcategory extends Model
 
     public $timestamps = false;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'name',
         'category_id',
     ];
 
-    /**
-     * Get the category that owns the subcategory.
-     */
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Get the products for the subcategory.
-     */
-    public function products()
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class);
     }

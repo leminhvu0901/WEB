@@ -6,13 +6,16 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // REGISTER USERS
     public function register(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        // KIEM TRA DU LIEU DAU VAO
+        $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:50|unique:users,username',
             'email' => 'required|email|max:100|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
@@ -21,18 +24,30 @@ class AuthController extends Controller
             'address' => 'required|string|max:255',
         ]);
 
+        // NEU DU LIEU KHONG HOP LE
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+        // BO LOC DU LIEU AN TOAN
+        $validated = $validator->validated();
+
+        // NEU DU LIEU HOP LE THI TAO USERS
         $user = User::create([
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'password' => $validated['password'],
+            'password' => Hash::make($validated['password']),
             'avatar' => $validated['avatar'] ?? null,
             'phone' => $validated['phone'],
             'address' => $validated['address'],
             'role' => 'user',
         ]);
-
+        //HE THONG NHAN DIEN 
         $token = $user->createToken('api-token')->plainTextToken;
 
+        // TRA VE JSON THEM THANH CONG
         return response()->json([
             'message' => 'Register successful',
             'token' => $token,

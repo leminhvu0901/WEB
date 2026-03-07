@@ -4,40 +4,33 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
+    public const UPDATED_AT = null;
+
     protected $fillable = [
         'name',
         'price',
-        'image',
         'description',
         'category_id',
         'subcategory_id',
         'location',
         'tag',
+        'stock',
     ];
 
-    /**
-     * Get the category that owns the product.
-     */
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Get the subcategory that owns the product.
-     */
-    public function subcategory()
+    public function subcategory(): BelongsTo
     {
         return $this->belongsTo(Subcategory::class);
     }
-    public $timestamps = false;
 }
 

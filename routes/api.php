@@ -21,9 +21,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+
+//REGISTER ANH LOGIN
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+//USERS
 Route::get('/users', [UserController::class, 'index']);
 Route::get('/users/{user}', [UserController::class, 'show']);
 Route::get('/users/{user}/posts', [UserController::class, 'posts']);

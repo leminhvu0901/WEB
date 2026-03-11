@@ -33,6 +33,7 @@ Route::get('/users/{user}/posts', [UserController::class, 'posts']);
 Route::get('/users/{user}/followers', [UserController::class, 'followers']);
 Route::get('/users/{user}/following', [UserController::class, 'following']);
 
+
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 

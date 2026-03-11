@@ -19,8 +19,8 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         $this->routes(function () {
+            // Expose API routes at root, e.g. /users.
             Route::middleware('api')
-                ->prefix('_API')
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')

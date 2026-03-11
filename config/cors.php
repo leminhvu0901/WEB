@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    // Apply CORS headers to all endpoints, including unprefixed routes like /users.
+    'paths' => ['*'],
 
     'allowed_methods' => ['*'],
 

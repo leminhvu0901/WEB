@@ -27,8 +27,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 //USERS
-Route::get('_users', [UserController::class, 'index']);
-Route::get('_users/{user}', [UserController::class, 'show']);
+Route::get('/users', [UserController::class, 'index']);
+Route::get('/users/{user}', [UserController::class, 'show']);
 Route::get('/users/{user}/posts', [UserController::class, 'posts']);
 Route::get('/users/{user}/followers', [UserController::class, 'followers']);
 Route::get('/users/{user}/following', [UserController::class, 'following']);

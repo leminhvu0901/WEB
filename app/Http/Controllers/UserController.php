@@ -81,13 +81,32 @@ class UserController extends Controller
     // }
 
 
-    public function show(User $user): JsonResponse
+    public function show(int $user): JsonResponse
     {
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Get user successful',
-            'data' => $user->loadCount(['posts', 'followers', 'following']), ///lay do bai dang va luoi theo doi o bang khac
-        ]);
+        try {
+            $foundUser = User::query()
+                ->withCount(['posts', 'followers', 'following'])
+                ->find($user);
+
+            if (! $foundUser) {
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Get user successful',
+                'data' => $foundUser,
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Get user failed',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
     }
 
     // cập nhật

@@ -73,6 +73,7 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? (function (): array {
                 $sslMode = strtolower((string) env('DB_SSL_MODE', ''));
+                $dbHost = strtolower((string) env('DB_HOST', ''));
                 $options = [
                     PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
                     PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
@@ -83,8 +84,11 @@ return [
 
                 $sslCaPath = env('MYSQL_ATTR_SSL_CA');
 
-                // On Linux containers (Render), use system CA bundle by default when SSL is required.
-                if ((!is_string($sslCaPath) || $sslCaPath === '') && in_array($sslMode, ['required', 'verify_ca', 'verify_identity'], true)) {
+                $isAzureMySqlHost = str_contains($dbHost, '.mysql.database.azure.com');
+
+                // On Linux containers (Render), use system CA bundle by default when SSL is required
+                // or when target host is Azure Database for MySQL.
+                if ((!is_string($sslCaPath) || $sslCaPath === '') && (in_array($sslMode, ['required', 'verify_ca', 'verify_identity'], true) || $isAzureMySqlHost)) {
                     $linuxDefaultCa = '/etc/ssl/certs/ca-certificates.crt';
 
                     if (is_file($linuxDefaultCa)) {

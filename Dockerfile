@@ -16,12 +16,14 @@ FROM php:8.2-cli
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     git \
     unzip \
     libzip-dev \
     libicu-dev \
     libonig-dev \
     && docker-php-ext-install pdo_mysql mbstring zip intl \
+    && update-ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -103,4 +103,31 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    // Hàm lấy thông tin tài khoản đang đăng nhập
+    public function me(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            if (! $user) {
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'Unauthorized',
+                ], 401);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Get current user successful',
+                'data' => $user->loadCount(['posts', 'followers', 'following']),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Get current user failed',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
+    }
 }

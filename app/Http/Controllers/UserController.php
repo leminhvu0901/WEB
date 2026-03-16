@@ -80,7 +80,8 @@ class UserController extends Controller
     //     }
     // }
 
-      public function show(User $user): JsonResponse
+
+    public function show(User $user): JsonResponse
     {
         return response()->json([
             'status' => 'success',

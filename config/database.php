@@ -45,7 +45,9 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            'url' => env('DATABASE_URL'),
+            // Use explicit MySQL URL only. This avoids accidental override
+            // by a platform-level DATABASE_URL from another database service.
+            'url' => env('MYSQL_DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'forge'),

@@ -45,13 +45,24 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // Use explicit MySQL URL only. This avoids accidental override
-            // by a platform-level DATABASE_URL from another database service.
-            'url' => env('MYSQL_DATABASE_URL'),
+            // Prefer explicit MySQL URL. Fall back to DATABASE_URL only when it is mysql://.
+            'url' => (function () {
+                $mysqlUrl = env('MYSQL_DATABASE_URL');
+                if (is_string($mysqlUrl) && $mysqlUrl !== '') {
+                    return $mysqlUrl;
+                }
+
+                $databaseUrl = env('DATABASE_URL');
+                if (is_string($databaseUrl) && str_starts_with($databaseUrl, 'mysql://')) {
+                    return $databaseUrl;
+                }
+
+                return null;
+            })(),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'forge'),
-            'username' => env('DB_USERNAME', 'forge'),
+            'database' => env('DB_DATABASE', env('DB_DBNAME', 'forge')),
+            'username' => env('DB_USERNAME', env('DB_USER', 'forge')),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',

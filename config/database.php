@@ -72,6 +72,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? (function (): array {
+                $sslMode = strtolower((string) env('DB_SSL_MODE', ''));
                 $options = [
                     PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
                     PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
@@ -81,6 +82,15 @@ return [
                 ];
 
                 $sslCaPath = env('MYSQL_ATTR_SSL_CA');
+
+                // On Linux containers (Render), use system CA bundle by default when SSL is required.
+                if ((!is_string($sslCaPath) || $sslCaPath === '') && in_array($sslMode, ['required', 'verify_ca', 'verify_identity'], true)) {
+                    $linuxDefaultCa = '/etc/ssl/certs/ca-certificates.crt';
+
+                    if (is_file($linuxDefaultCa)) {
+                        $sslCaPath = $linuxDefaultCa;
+                    }
+                }
 
                 // Only set CA file if the path exists in the current runtime environment.
                 if (is_string($sslCaPath) && $sslCaPath !== '' && is_file($sslCaPath)) {

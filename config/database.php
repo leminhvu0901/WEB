@@ -60,11 +60,24 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
-            ], static fn ($value) => !is_null($value)) : [],
+            'options' => extension_loaded('pdo_mysql') ? (function (): array {
+                $options = [
+                    PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
+                    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
+                        env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
+                        FILTER_VALIDATE_BOOLEAN
+                    ),
+                ];
+
+                $sslCaPath = env('MYSQL_ATTR_SSL_CA');
+
+                // Only set CA file if the path exists in the current runtime environment.
+                if (is_string($sslCaPath) && $sslCaPath !== '' && is_file($sslCaPath)) {
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCaPath;
+                }
+
+                return $options;
+            })() : [],
         ],
         'pgsql' => [
             'driver' => 'pgsql',

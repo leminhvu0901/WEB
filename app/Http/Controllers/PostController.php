@@ -314,12 +314,27 @@ class PostController extends Controller
                 'status' => 'sometimes|in:active,hidden',
                 'images' => 'sometimes|array|min:1',
                 'images.*' => 'required_with:images|string|max:255',
+                'add_images' => 'sometimes|array|min:1',
+                'add_images.*' => 'required_with:add_images|string|max:255',
+                'delete_image_ids' => 'sometimes|array|min:1',
+                'delete_image_ids.*' => 'required_with:delete_image_ids|integer|distinct',
                 'thumbnail_index' => 'nullable|integer|min:0',
             ]);
+
+            // Không cho phép vừa thay toàn bộ images, vừa add/delete trong cùng 1 request.
+            if (
+                array_key_exists('images', $validated)
+                && (array_key_exists('add_images', $validated) || array_key_exists('delete_image_ids', $validated))
+            ) {
+                throw ValidationException::withMessages([
+                    'images' => ['Cannot combine full image replacement with add/delete image operations.'],
+                ]);
+            }
 
             // Cập nhật post + images trong 1 transaction để tránh dữ liệu nửa chừng.
             DB::transaction(function () use ($validated, $foundPost) {
                 $postData = [];
+                $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
 
                 // Chỉ cập nhật caption nếu client có truyền key này.
                 if (array_key_exists('caption', $validated)) {
@@ -339,7 +354,12 @@ class PostController extends Controller
                 // Nếu client gửi lại images, thay thế toàn bộ danh sách ảnh cũ.
                 if (array_key_exists('images', $validated)) {
                     $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
-                    $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
+
+                    if ($thumbnailIndex >= count($validated['images'])) {
+                        throw ValidationException::withMessages([
+                            'thumbnail_index' => ['Thumbnail index is out of range.'],
+                        ]);
+                    }
 
                     $images = array_map(
                         static function (string $imageUrl, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
@@ -360,6 +380,73 @@ class PostController extends Controller
                     // Xóa ảnh cũ rồi thêm ảnh mới.
                     $foundPost->images()->delete();
                     $foundPost->images()->createMany($images);
+                } else {
+                    // Hỗ trợ update linh hoạt: thêm ảnh mới hoặc xóa theo image id.
+                    if (array_key_exists('delete_image_ids', $validated)) {
+                        $deleteImageIds = $validated['delete_image_ids'];
+
+                        $ownedImageIds = $foundPost->images()
+                            ->whereIn('id', $deleteImageIds)
+                            ->pluck('id')
+                            ->all();
+
+                        if (count($ownedImageIds) !== count($deleteImageIds)) {
+                            throw ValidationException::withMessages([
+                                'delete_image_ids' => ['Some images do not belong to this post.'],
+                            ]);
+                        }
+
+                        $foundPost->images()->whereIn('id', $deleteImageIds)->delete();
+                    }
+
+                    if (array_key_exists('add_images', $validated)) {
+                        $newImages = array_map(
+                            static function (string $imageUrl) use ($hasThumbnailColumn): array {
+                                $row = [
+                                    'image_url' => $imageUrl,
+                                ];
+
+                                if ($hasThumbnailColumn) {
+                                    $row['is_thumbnail'] = false;
+                                }
+
+                                return $row;
+                            },
+                            $validated['add_images']
+                        );
+
+                        $foundPost->images()->createMany($newImages);
+                    }
+                }
+
+                // Giữ rule nhất quán với API tạo mới: bài viết phải còn ít nhất 1 ảnh.
+                if ($foundPost->images()->count() === 0) {
+                    throw ValidationException::withMessages([
+                        'images' => ['A post must have at least one image.'],
+                    ]);
+                }
+
+                if ($hasThumbnailColumn) {
+                    // Chuẩn hóa thumbnail: luôn có đúng 1 thumbnail sau khi update.
+                    $thumbnailIds = $foundPost->images()
+                        ->where('is_thumbnail', true)
+                        ->orderBy('id')
+                        ->pluck('id')
+                        ->all();
+
+                    if (empty($thumbnailIds)) {
+                        $firstImageId = $foundPost->images()->orderBy('id')->value('id');
+
+                        if ($firstImageId) {
+                            $foundPost->images()->where('id', $firstImageId)->update(['is_thumbnail' => true]);
+                        }
+                    } elseif (count($thumbnailIds) > 1) {
+                        $keepThumbnailId = $thumbnailIds[0];
+
+                        $foundPost->images()
+                            ->where('id', '!=', $keepThumbnailId)
+                            ->update(['is_thumbnail' => false]);
+                    }
                 }
             });
 

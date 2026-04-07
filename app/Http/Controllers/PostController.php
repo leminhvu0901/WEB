@@ -7,10 +7,12 @@ use App\Models\PostComment;
 use App\Models\PostLike;
 use App\Models\PostShare;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -170,17 +172,26 @@ class PostController extends Controller
                 ], 401);
             }
 
-            // Validate input: caption trạng thái là tùy chọn, nhưng images bắt buộc phải có ít nhất 1 URL.
+            // Validate input: caption trạng thái là tùy chọn, nhưng images bắt buộc phải có ít nhất 1 file ảnh.
             $validated = $request->validate([
                 'caption' => 'nullable|string',
                 'status' => 'sometimes|in:active,hidden',
                 'images' => 'required|array|min:1',
-                'images.*' => 'required|string|max:255',
+                'images.*' => 'required|file|image|max:5120',
                 'thumbnail_index' => 'nullable|integer|min:0',
             ]);
 
+            $uploadedImages = $request->file('images', []);
+            $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
+
+            if ($thumbnailIndex >= count($uploadedImages)) {
+                throw ValidationException::withMessages([
+                    'thumbnail_index' => ['Thumbnail index is out of range.'],
+                ]);
+            }
+
             // Dùng transaction để đảm bảo tạo post và images thành công cùng nhau.
-            $post = DB::transaction(function () use ($validated, $authUser) {
+            $post = DB::transaction(function () use ($validated, $authUser, $uploadedImages, $thumbnailIndex) {
                 // Tạo bản ghi bài viết gốc.
                 $post = Post::query()->create([
                     'user_id' => $authUser->id,
@@ -188,15 +199,13 @@ class PostController extends Controller
                     'status' => $validated['status'] ?? 'active',
                 ]);
 
-                // Mặc định ảnh đầu tiên là thumbnail nếu client không truyền thumbnail_index.
-                $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
                 $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
 
-                // Chuẩn hóa mảng URL ảnh về format createMany().
+                // Chuẩn hóa mảng file ảnh về format createMany().
                 $images = array_map(
-                    static function (string $imageUrl, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
+                    static function (UploadedFile $imageFile, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
                         $row = [
-                            'image_url' => $imageUrl,
+                            'image_url' => $imageFile->store('posts', 'public'),
                         ];
 
                         if ($hasThumbnailColumn) {
@@ -205,8 +214,8 @@ class PostController extends Controller
 
                         return $row;
                     },
-                    $validated['images'],
-                    array_keys($validated['images'])
+                    $uploadedImages,
+                    array_keys($uploadedImages)
                 );
 
                 // Tạo toàn bộ ảnh liên kết với post.
@@ -313,13 +322,16 @@ class PostController extends Controller
                 'caption' => 'sometimes|nullable|string',
                 'status' => 'sometimes|in:active,hidden',
                 'images' => 'sometimes|array|min:1',
-                'images.*' => 'required_with:images|string|max:255',
+                'images.*' => 'required_with:images|file|image|max:5120',
                 'add_images' => 'sometimes|array|min:1',
-                'add_images.*' => 'required_with:add_images|string|max:255',
+                'add_images.*' => 'required_with:add_images|file|image|max:5120',
                 'delete_image_ids' => 'sometimes|array|min:1',
                 'delete_image_ids.*' => 'required_with:delete_image_ids|integer|distinct',
                 'thumbnail_index' => 'nullable|integer|min:0',
             ]);
+
+            $replacementImages = $request->file('images', []);
+            $additionalImages = $request->file('add_images', []);
 
             // Không cho phép vừa thay toàn bộ images, vừa add/delete trong cùng 1 request.
             if (
@@ -332,7 +344,7 @@ class PostController extends Controller
             }
 
             // Cập nhật post + images trong 1 transaction để tránh dữ liệu nửa chừng.
-            DB::transaction(function () use ($validated, $foundPost) {
+            DB::transaction(function () use ($validated, $foundPost, $replacementImages, $additionalImages) {
                 $postData = [];
                 $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
 
@@ -355,16 +367,16 @@ class PostController extends Controller
                 if (array_key_exists('images', $validated)) {
                     $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
 
-                    if ($thumbnailIndex >= count($validated['images'])) {
+                    if ($thumbnailIndex >= count($replacementImages)) {
                         throw ValidationException::withMessages([
                             'thumbnail_index' => ['Thumbnail index is out of range.'],
                         ]);
                     }
 
                     $images = array_map(
-                        static function (string $imageUrl, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
+                        static function (UploadedFile $imageFile, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
                             $row = [
-                                'image_url' => $imageUrl,
+                                'image_url' => $imageFile->store('posts', 'public'),
                             ];
 
                             if ($hasThumbnailColumn) {
@@ -373,20 +385,32 @@ class PostController extends Controller
 
                             return $row;
                         },
-                        $validated['images'],
-                        array_keys($validated['images'])
+                        $replacementImages,
+                        array_keys($replacementImages)
                     );
+
+                    $oldImagePaths = $foundPost->images()
+                        ->pluck('image_url')
+                        ->filter()
+                        ->all();
 
                     // Xóa ảnh cũ rồi thêm ảnh mới.
                     $foundPost->images()->delete();
                     $foundPost->images()->createMany($images);
+
+                    if (! empty($oldImagePaths)) {
+                        Storage::disk('public')->delete($oldImagePaths);
+                    }
                 } else {
                     // Hỗ trợ update linh hoạt: thêm ảnh mới hoặc xóa theo image id.
                     if (array_key_exists('delete_image_ids', $validated)) {
                         $deleteImageIds = $validated['delete_image_ids'];
 
-                        $ownedImageIds = $foundPost->images()
+                        $imagesToDelete = $foundPost->images()
                             ->whereIn('id', $deleteImageIds)
+                            ->get(['id', 'image_url']);
+
+                        $ownedImageIds = $imagesToDelete
                             ->pluck('id')
                             ->all();
 
@@ -397,13 +421,22 @@ class PostController extends Controller
                         }
 
                         $foundPost->images()->whereIn('id', $deleteImageIds)->delete();
+
+                        $imagePathsToDelete = $imagesToDelete
+                            ->pluck('image_url')
+                            ->filter()
+                            ->all();
+
+                        if (! empty($imagePathsToDelete)) {
+                            Storage::disk('public')->delete($imagePathsToDelete);
+                        }
                     }
 
                     if (array_key_exists('add_images', $validated)) {
                         $newImages = array_map(
-                            static function (string $imageUrl) use ($hasThumbnailColumn): array {
+                            static function (UploadedFile $imageFile) use ($hasThumbnailColumn): array {
                                 $row = [
-                                    'image_url' => $imageUrl,
+                                    'image_url' => $imageFile->store('posts', 'public'),
                                 ];
 
                                 if ($hasThumbnailColumn) {
@@ -412,7 +445,7 @@ class PostController extends Controller
 
                                 return $row;
                             },
-                            $validated['add_images']
+                            $additionalImages
                         );
 
                         $foundPost->images()->createMany($newImages);
@@ -510,8 +543,17 @@ class PostController extends Controller
                 ], 403);
             }
 
+            $imagePaths = $foundPost->images()
+                ->pluck('image_url')
+                ->filter()
+                ->all();
+
             // Xóa post, các bản ghi phụ thuộc sẽ đi theo theo rule của foreign key.
             $foundPost->delete();
+
+            if (! empty($imagePaths)) {
+                Storage::disk('public')->delete($imagePaths);
+            }
 
             return response()->json([
                 'status' => 'success',

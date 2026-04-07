@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -19,16 +20,21 @@ class AuthController extends Controller
                 'username' => 'required|string|max:50|',
                 'email' => 'required|email|max:100|unique:users,email',
                 'password' => 'required|string|min:6|confirmed',
-                'avatar' => 'nullable|string|max:255',
+                'avatar' => 'nullable|file|image|max:5120',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:255',
             ]);
+
+            $avatarPath = null;
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            }
 
             $user = User::create([
                 'username' => $validated['username'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
-                'avatar' => $validated['avatar'] ?? null,
+                'avatar' => $avatarPath,
                 'role' => 'user',
                 'phone' => $validated['phone'] ?? null,
                 'address' => $validated['address'] ?? null,

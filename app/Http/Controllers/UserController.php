@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -117,7 +118,7 @@ class UserController extends Controller
                 'username' => 'sometimes|string|max:50|',//sotime là không bị bắt lỗi khi bạn không sửa hết mà chỉ sửa 1 vài cái
                 'email' => 'sometimes|email|max:100|unique:users,email,' . $user->id,
                 'password' => 'nullable|string|min:6|confirmed',
-                'avatar' => 'nullable|string|max:255',
+                'avatar' => 'nullable|file|image|max:5120',
                 'role' => 'sometimes|in:admin,user',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:255',
@@ -125,6 +126,16 @@ class UserController extends Controller
 
             if (empty($validated['password'])) {// kiểm tra nếu pass rỗng thì xóa luôn null , chánh bị pass rỗng
                 unset($validated['password']);
+            }
+
+            if ($request->hasFile('avatar')) {
+                if (! empty($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+
+                $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            } else {
+                unset($validated['avatar']);
             }
 
             $user->update($validated);

@@ -33,6 +33,5 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::get('/me', [AuthController::class, 'me']); //thong tin user hien tai dang dang nhap
 
 	Route::post('/posts', [PostController::class, 'add']); // tạo bài viết mới (nhiều ảnh)
-	Route::match(['put', 'patch'], '/posts/{post}', [PostController::class, 'update']); // cập nhật bài viết
 	Route::delete('/posts/{post}', [PostController::class, 'destroy']); // xóa bài viết
 });

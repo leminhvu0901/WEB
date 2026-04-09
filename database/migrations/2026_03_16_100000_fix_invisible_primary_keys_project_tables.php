@@ -18,10 +18,6 @@ return new class extends Migration
             'products',
             'posts',
             'post_images',
-            'post_comments',
-            'post_likes',
-            'post_shares',
-            'follows',
         ];
 
         foreach ($tables as $table) {

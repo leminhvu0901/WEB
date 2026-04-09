@@ -13,8 +13,6 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
             $table->text('caption')->nullable();
             $table->timestamp('created_at')->useCurrent();
-            $table->integer('like_count')->default(0);
-            $table->integer('comment_count')->default(0);
             $table->enum('status', ['active', 'hidden'])->default('active');
         });
     }

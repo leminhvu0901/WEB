@@ -126,7 +126,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Get current user successful',
-                'data' => $user->loadCount(['posts', 'followers', 'following']),
+                'data' => $user->loadCount(['posts']),
             ]);
         } catch (Throwable $e) {
             return response()->json([

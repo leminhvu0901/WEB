@@ -16,8 +16,6 @@ class Post extends Model
     protected $fillable = [
         'user_id',
         'caption',
-        'like_count',
-        'comment_count',
         'status',
     ];
 
@@ -29,20 +27,5 @@ class Post extends Model
     public function images(): HasMany
     {
         return $this->hasMany(PostImage::class);
-    }
-
-    public function comments(): HasMany
-    {
-        return $this->hasMany(PostComment::class)->latest('id');
-    }
-
-    public function likes(): HasMany
-    {
-        return $this->hasMany(PostLike::class);
-    }
-
-    public function shares(): HasMany
-    {
-        return $this->hasMany(PostShare::class);
     }
 }

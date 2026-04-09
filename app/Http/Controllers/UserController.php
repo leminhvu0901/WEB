@@ -16,7 +16,7 @@ class UserController extends Controller
     {
         try {
             $users = User::query()
-                ->withCount(['posts', 'followers', 'following'])
+                ->withCount(['posts'])
                 ->orderByDesc('id')
                 ->limit(20)
                 ->get();
@@ -86,7 +86,7 @@ class UserController extends Controller
     {
         try {
             $foundUser = User::query()
-                ->withCount(['posts', 'followers', 'following'])
+                ->withCount(['posts'])
                 ->find($user);
 
             if (! $foundUser) {

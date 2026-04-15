@@ -45,9 +45,14 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // Only use explicit MYSQL_DATABASE_URL to avoid accidental overrides
-            // from platform-provided DATABASE_URL values.
+            // By default, use DB_HOST/DB_DATABASE credentials directly.
+            // Enable DB_USE_URL=true only when you explicitly want URL-based config.
             'url' => (function () {
+                $useUrl = filter_var(env('DB_USE_URL', false), FILTER_VALIDATE_BOOLEAN);
+                if (!$useUrl) {
+                    return null;
+                }
+
                 $mysqlUrl = env('MYSQL_DATABASE_URL');
                 if (is_string($mysqlUrl) && $mysqlUrl !== '') {
                     return $mysqlUrl;

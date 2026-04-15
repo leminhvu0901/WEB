@@ -19,6 +19,8 @@ services:
       # Use explicit MySQL env vars for Render to avoid stale DATABASE_URL overrides.
       - key: DB_CONNECTION
         value: mysql
+      - key: DB_USE_URL
+        value: "false"
       - key: DB_HOST
         value: mysql-368c5b7e-gundamstore.e.aivencloud.com
       - key: DB_PORT

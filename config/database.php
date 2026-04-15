@@ -62,8 +62,9 @@ return [
             })(),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', env('DB_DBNAME', 'forge')),
-            'username' => env('DB_USERNAME', env('DB_USER', 'forge')),
+            // Prefer compatibility aliases first to avoid stale Render vars overriding new values.
+            'database' => env('DB_DBNAME', env('DB_DATABASE', 'forge')),
+            'username' => env('DB_USER', env('DB_USERNAME', 'forge')),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',

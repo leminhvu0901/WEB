@@ -34,4 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 	Route::post('/posts', [PostController::class, 'add']); // tạo bài viết mới (nhiều ảnh)
 	Route::delete('/posts/{post}', [PostController::class, 'destroy']); // xóa bài viết
+
 });
+

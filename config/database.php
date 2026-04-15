@@ -45,16 +45,12 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // Prefer explicit MySQL URL. Fall back to DATABASE_URL only when it is mysql://.
+            // Only use explicit MYSQL_DATABASE_URL to avoid accidental overrides
+            // from platform-provided DATABASE_URL values.
             'url' => (function () {
                 $mysqlUrl = env('MYSQL_DATABASE_URL');
                 if (is_string($mysqlUrl) && $mysqlUrl !== '') {
                     return $mysqlUrl;
-                }
-
-                $databaseUrl = env('DATABASE_URL');
-                if (is_string($databaseUrl) && str_starts_with($databaseUrl, 'mysql://')) {
-                    return $databaseUrl;
                 }
 
                 return null;

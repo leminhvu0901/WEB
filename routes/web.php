@@ -20,3 +20,6 @@ Route::get('/', function () {
         'message' => 'API is running',
     ]);
 });
+
+Route::view('/update-user', 'update-user');
+

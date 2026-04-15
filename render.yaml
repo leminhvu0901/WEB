@@ -16,3 +16,32 @@ services:
         value: file
       - key: SESSION_DRIVER
         value: file
+      # Use explicit MySQL env vars for Render to avoid stale DATABASE_URL overrides.
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        value: mysql-368c5b7e-gundamstore.e.aivencloud.com
+      - key: DB_PORT
+        value: "18815"
+      - key: DB_DATABASE
+        value: defaultdb
+      - key: DB_DBNAME
+        value: defaultdb
+      - key: DB_USERNAME
+        value: avnadmin
+      - key: DB_USER
+        value: avnadmin
+      - key: DB_PASSWORD
+        sync: false
+      - key: MYSQL_DATABASE_URL
+        value: ""
+      - key: DB_SSL_MODE
+        value: REQUIRED
+      - key: DB_TIMEOUT
+        value: "5"
+      - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+        value: "false"
+      - key: DATABASE_URL
+        value: ""
+      - key: DB_URI
+        value: ""

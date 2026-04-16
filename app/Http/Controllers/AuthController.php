@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -13,17 +14,10 @@ use Throwable;
 class AuthController extends Controller
 {
     // Hàm đăng ký users
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'username' => 'required|string|max:50|',
-                'email' => 'required|email|max:100|unique:users,email',
-                'password' => 'required|string|min:6|confirmed',
-                'avatar' => 'nullable|file|image|max:5120',
-                'phone' => 'nullable|string|max:20',
-                'address' => 'nullable|string|max:255',
-            ]);
+            $validated = $request->validated();
 
             $avatarPath = null;
             if ($request->hasFile('avatar')) {
@@ -67,13 +61,10 @@ class AuthController extends Controller
     }
 
     //Hàm đăng nhập
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'email' => 'required|email',
-                'password' => 'required|string',
-            ]);
+            $validated = $request->validated();
 
             $user = User::query()->where('email', $validated['email'])->first();
 

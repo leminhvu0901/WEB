@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class UserController extends Controller
@@ -35,53 +34,6 @@ class UserController extends Controller
         }
     }
 
-    // get data 1 users
-
-
-    // thêm users - bỏ hàm này vì đã có hàm register
-    // public function store(Request $request): JsonResponse
-    // {
-    //     try {
-    //         $validated = $request->validate([
-    //             'username' => 'required|string|max:50|',
-    //             'email' => 'required|email|max:100|unique:users,email',
-    //             'password' => 'required|string|min:6|confirmed',
-    //             'avatar' => 'nullable|string|max:255',
-    //             'phone' => 'nullable|string|max:20',
-    //             'address' => 'nullable|string|max:255',
-    //         ]);
-
-    //         $user = User::create([
-    //             'username' => $validated['username'],
-    //             'email' => $validated['email'],
-    //             'password' => $validated['password'],
-    //             'avatar' => $validated['avatar'] ?? null,
-    //             'role' => 'user',
-    //             'phone' => $validated['phone'] ?? null,
-    //             'address' => $validated['address'] ?? null,
-    //         ]);
-
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'User created successfully',
-    //             'data' => $user,
-    //         ], 201);
-    //     } catch (ValidationException $e) { //bắt các lỗi riêng trong  validated
-    //         return response()->json([
-    //             'status' => 'fail',
-    //             'message' => 'Validation failed',
-    //             'errors' => $e->errors(),
-    //         ], 422);
-    //     } catch (Throwable $e) { // bắt các lỗi còn lại không có trong validated
-    //         return response()->json([
-    //             'status' => 'fail',
-    //             'message' => 'Create user failed',
-    //             'error' => $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
-
     public function show(int $user): JsonResponse
     {
         try {
@@ -89,7 +41,7 @@ class UserController extends Controller
                 ->withCount(['posts'])
                 ->find($user);
 
-            if (! $foundUser) {
+            if (!$foundUser) {
                 return response()->json([
                     'status' => 'fail',
                     'message' => 'User not found',
@@ -111,25 +63,17 @@ class UserController extends Controller
     }
 
     // cập nhật
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'username' => 'sometimes|string|max:50|',//sotime là không bị bắt lỗi khi bạn không sửa hết mà chỉ sửa 1 vài cái
-                'email' => 'sometimes|email|max:100|unique:users,email,' . $user->id,
-                'password' => 'nullable|string|min:6|confirmed',
-                'avatar' => 'nullable|file|image|max:5120',
-                'role' => 'sometimes|in:admin,user',
-                'phone' => 'nullable|string|max:20',
-                'address' => 'nullable|string|max:255',
-            ]);
+            $validated = $request->validated();
 
             if (empty($validated['password'])) {// kiểm tra nếu pass rỗng thì xóa luôn null , chánh bị pass rỗng
                 unset($validated['password']);
             }
 
             if ($request->hasFile('avatar')) {
-                if (! empty($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
+                if (!empty($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
                     Storage::disk('public')->delete($user->avatar);
                 }
 
@@ -145,12 +89,6 @@ class UserController extends Controller
                 'message' => 'User updated successfully',
                 'data' => $user->fresh(),
             ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 422);
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'fail',

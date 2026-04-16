@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Post\StorePostRequest;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -55,7 +56,7 @@ class PostController extends Controller
     }
 
     // Tạo bài viết mới (hỗ trợ nhiều hình ảnh)
-    public function add(Request $request): JsonResponse
+    public function add(StorePostRequest $request): JsonResponse
     {
         try {
             // Lấy user đang đăng nhập từ token Sanctum.
@@ -69,14 +70,7 @@ class PostController extends Controller
                 ], 401);
             }
 
-            // Validate input: caption trạng thái là tùy chọn, nhưng images bắt buộc phải có ít nhất 1 file ảnh.
-            $validated = $request->validate([
-                'caption' => 'nullable|string',
-                'status' => 'sometimes|in:active,hidden',
-                'images' => 'required|array|min:1',
-                'images.*' => 'required|file|image|max:5120',
-                'thumbnail_index' => 'nullable|integer|min:0',
-            ]);
+            $validated = $request->validated();
 
             $uploadedImages = $request->file('images', []);
             $thumbnailIndex = $validated['thumbnail_index'] ?? 0;

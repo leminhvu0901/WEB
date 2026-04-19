@@ -22,17 +22,17 @@ services:
       - key: DB_USE_URL
         value: "false"
       - key: DB_HOST
-        value: mysql-368c5b7e-gundamstore.e.aivencloud.com
+        value: gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com
       - key: DB_PORT
-        value: "18815"
+        value: "4000"
       - key: DB_DATABASE
-        value: defaultdb
+        value: test
       - key: DB_DBNAME
-        value: defaultdb
+        value: test
       - key: DB_USERNAME
-        value: avnadmin
+        value: 3bHZndwFRc3VLmY.root
       - key: DB_USER
-        value: avnadmin
+        value: 3bHZndwFRc3VLmY.root
       - key: DB_PASSWORD
         sync: false
       - key: MYSQL_DATABASE_URL
@@ -41,6 +41,8 @@ services:
         value: REQUIRED
       - key: DB_TIMEOUT
         value: "5"
+      - key: MYSQL_ATTR_SSL_CA
+        value: /etc/ssl/certs/ca-certificates.crt
       - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
         value: "false"
       - key: DATABASE_URL

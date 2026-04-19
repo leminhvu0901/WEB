@@ -57,17 +57,37 @@ return [
 
             'options' => extension_loaded('pdo_mysql') ? (function (): array {
                 $sslCa = env('MYSQL_ATTR_SSL_CA');
+                $dbHost = strtolower((string) env('DB_HOST', ''));
+                $sslMode = strtolower((string) env('DB_SSL_MODE', ''));
 
                 if (is_string($sslCa) && $sslCa !== '' && !preg_match('/^[A-Za-z]:[\\\\\/]/', $sslCa) && !str_starts_with($sslCa, '/')) {
                     $sslCa = base_path($sslCa);
                 }
 
+                $needsSecureTransport = str_contains($dbHost, 'tidbcloud.com')
+                    || in_array($sslMode, ['required', 'verify_ca', 'verify_identity'], true);
+
+                if ((!is_string($sslCa) || $sslCa === '') && $needsSecureTransport) {
+                    $candidates = [
+                        base_path('storage/certs/DigiCertGlobalRootG2.crt.pem'),
+                        '/etc/ssl/certs/ca-certificates.crt',
+                    ];
+
+                    foreach ($candidates as $candidate) {
+                        if (is_file($candidate)) {
+                            $sslCa = $candidate;
+                            break;
+                        }
+                    }
+                }
+
                 return array_filter([
-                    PDO::MYSQL_ATTR_SSL_CA => $sslCa,
+                    PDO::MYSQL_ATTR_SSL_CA => (is_string($sslCa) && $sslCa !== '' && is_file($sslCa)) ? $sslCa : null,
                     PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
                         env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
                         FILTER_VALIDATE_BOOLEAN
                     ),
+                    PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
                 ], static fn ($value) => $value !== null && $value !== '');
             })() : [],
         ],

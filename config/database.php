@@ -45,65 +45,30 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // By default, use DB_HOST/DB_DATABASE credentials directly.
-            // Enable DB_USE_URL=true only when you explicitly want URL-based config.
-            'url' => (function () {
-                $useUrl = filter_var(env('DB_USE_URL', false), FILTER_VALIDATE_BOOLEAN);
-                if (!$useUrl) {
-                    return null;
-                }
-
-                $mysqlUrl = env('MYSQL_DATABASE_URL');
-                if (is_string($mysqlUrl) && $mysqlUrl !== '') {
-                    return $mysqlUrl;
-                }
-
-                return null;
-            })(),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            // Prefer compatibility aliases first to avoid stale Render vars overriding new values.
-            'database' => env('DB_DBNAME', env('DB_DATABASE', 'forge')),
-            'username' => env('DB_USER', env('DB_USERNAME', 'forge')),
-            'password' => env('DB_PASSWORD', ''),
-            'unix_socket' => env('DB_SOCKET', ''),
+            'host' => env('DB_HOST'),
+            'port' => env('DB_PORT'),
+            'database' => env('DB_DATABASE'),
+            'username' => env('DB_USERNAME'),
+            'password' => env('DB_PASSWORD'),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
-            'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+
             'options' => extension_loaded('pdo_mysql') ? (function (): array {
-                $sslMode = strtolower((string) env('DB_SSL_MODE', ''));
-                $dbHost = strtolower((string) env('DB_HOST', ''));
-                $options = [
-                    PDO::ATTR_TIMEOUT => (int) env('DB_TIMEOUT', 5),
+                $sslCa = env('MYSQL_ATTR_SSL_CA');
+
+                if (is_string($sslCa) && $sslCa !== '' && !preg_match('/^[A-Za-z]:[\\\\\/]/', $sslCa) && !str_starts_with($sslCa, '/')) {
+                    $sslCa = base_path($sslCa);
+                }
+
+                return array_filter([
+                    PDO::MYSQL_ATTR_SSL_CA => $sslCa,
                     PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
                         env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
                         FILTER_VALIDATE_BOOLEAN
                     ),
-                ];
-
-                $sslCaPath = env('MYSQL_ATTR_SSL_CA');
-
-                $isAzureMySqlHost = str_contains($dbHost, '.mysql.database.azure.com');
-
-                // On Linux containers (Render), use system CA bundle by default when SSL is required
-                // or when target host is Azure Database for MySQL.
-                if ((!is_string($sslCaPath) || $sslCaPath === '') && (in_array($sslMode, ['required', 'verify_ca', 'verify_identity'], true) || $isAzureMySqlHost)) {
-                    $linuxDefaultCa = '/etc/ssl/certs/ca-certificates.crt';
-
-                    if (is_file($linuxDefaultCa)) {
-                        $sslCaPath = $linuxDefaultCa;
-                    }
-                }
-
-                // Only set CA file if the path exists in the current runtime environment.
-                if (is_string($sslCaPath) && $sslCaPath !== '' && is_file($sslCaPath)) {
-                    $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCaPath;
-                }
-
-                return $options;
+                ], static fn ($value) => $value !== null && $value !== '');
             })() : [],
         ],
         'pgsql' => [

@@ -15,10 +15,10 @@ class UserController extends Controller
     {
         try {
             $users = User::query()
-                ->withCount(['posts'])
-                ->orderByDesc('id')
+                ->withCount(['posts'])//dem bai post
+                ->orderByDesc('id') //moi nhat them trc
                 ->limit(20)
-                ->get();
+                ->get(); //lay du lieu
 
             return response()->json([
                 'status' => 'success',
@@ -34,6 +34,9 @@ class UserController extends Controller
         }
     }
 
+
+
+    //lay 1 user
     public function show(int $user): JsonResponse
     {
         try {

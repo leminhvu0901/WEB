@@ -209,8 +209,8 @@ class PostController extends Controller
 
             $imagePaths = $foundPost->images()
                 ->pluck('image_url')
-                ->filter()
-                ->all();
+                ->filter() //bỏ giá trị rỗng
+                ->all(); //thành mảng PHP
 
             // Xóa post, các bản ghi phụ thuộc sẽ đi theo theo rule của foreign key.
             $foundPost->delete();

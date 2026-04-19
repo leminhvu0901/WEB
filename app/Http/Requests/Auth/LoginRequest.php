@@ -6,6 +6,7 @@ use App\Http\Requests\ApiFormRequest;
 
 class LoginRequest extends ApiFormRequest
 {
+    // ham kiem tra dieu kien bat buoc
     public function rules(): array
     {
         return [

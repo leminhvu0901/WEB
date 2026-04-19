@@ -6,6 +6,7 @@ use App\Http\Requests\ApiFormRequest;
 
 class RegisterRequest extends ApiFormRequest
 {
+    //ham kiem tra du lieu dau vao
     public function rules(): array
     {
         return [

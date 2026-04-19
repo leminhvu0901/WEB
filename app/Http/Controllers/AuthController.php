@@ -13,7 +13,7 @@ use Throwable;
 
 class AuthController extends Controller
 {
-    // Hàm đăng ký users
+    // Hàm đăng ký user
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
@@ -66,9 +66,10 @@ class AuthController extends Controller
         try {
             $validated = $request->validated();
 
+            //tim va lay user
             $user = User::query()->where('email', $validated['email'])->first();
 
-            if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            if (! $user || ! Hash::check($validated['password'], $user->password)) { //kiem tra user và password
                 return response()->json([
                     'status' => 'fail',
                     'message' => 'Invalid email or password',
@@ -105,7 +106,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
+            $user = $request->user(); // tra ve user hien tai
 
             if (! $user) {
                 return response()->json([

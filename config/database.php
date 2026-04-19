@@ -47,8 +47,33 @@ return [
             'driver' => 'mysql',
             'host' => env('DB_HOST'),
             'port' => env('DB_PORT'),
-            'database' => env('DB_DATABASE'),
-            'username' => env('DB_USERNAME'),
+            'database' => (function () {
+                $database = env('DB_DATABASE');
+                $legacyDatabase = env('DB_DBNAME');
+
+                if ((!is_string($database) || trim($database) === '') && is_string($legacyDatabase) && trim($legacyDatabase) !== '') {
+                    return trim($legacyDatabase);
+                }
+
+                return is_string($database) ? trim($database) : $database;
+            })(),
+            'username' => (function () {
+                $username = env('DB_USERNAME');
+                $legacyUsername = env('DB_USER');
+
+                if ((!is_string($username) || trim($username) === '') && is_string($legacyUsername) && trim($legacyUsername) !== '') {
+                    return trim($legacyUsername);
+                }
+
+                $username = is_string($username) ? trim($username) : $username;
+                $legacyUsername = is_string($legacyUsername) ? trim($legacyUsername) : $legacyUsername;
+
+                if (is_string($legacyUsername) && $legacyUsername !== '' && is_string($username) && !str_contains($username, '.') && str_contains($legacyUsername, '.')) {
+                    return $legacyUsername;
+                }
+
+                return $username;
+            })(),
             'password' => env('DB_PASSWORD'),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',

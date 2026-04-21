@@ -333,10 +333,10 @@
             noneData.style.display = 'none';
             container.innerHTML = `<div class="posts-grid">${posts.map(post => `
                 <div class="post-card">
-                    ${post.image_url ? `<img src="${post.image_url}" alt="Post" class="post-image">` : '<div class="post-image" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;"><span style="color: #9ca3af;">No image</span></div>'}
+                    ${post.image_url ? `<img src="${API_BASE}${post.image_url}" alt="Post" class="post-image">` : '<div class="post-image" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;"><span style="color: #9ca3af;">No image</span></div>'}
                     <div class="post-content">
                         <div class="post-author">
-                            ${post.user && post.user.avatar_url ? `<img src="${post.user.avatar_url}" alt="${post.user.username}" class="post-author-avatar">` : '<div class="post-author-avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 10px;">No</span></div>'}
+                            ${post.user && post.user.avatar_url ? `<img src="${API_BASE}${post.user.avatar_url}" alt="${post.user.username}" class="post-author-avatar">` : '<div class="post-author-avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 10px;">No</span></div>'}
                             <div class="post-author-info">
                                 <h4>${escapeHtml(post.user?.username || 'Unknown')}</h4>
                                 <p>${formatDate(post.created_at)}</p>

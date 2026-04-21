@@ -19,6 +19,7 @@ class Post extends Model
     // Danh sach cot duoc phep gan hang loat qua create()/update().
     protected $fillable = [
         'user_id',
+        'image',
         'caption',
         'status',
     ];

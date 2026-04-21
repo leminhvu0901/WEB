@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Post\StorePostRequest;
 use App\Models\Post;
+use App\Models\PostImage;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +18,44 @@ use Throwable;
 
 class PostController extends Controller
 {
+    private function hasPostImagesTable(): bool
+    {
+        return Schema::hasTable('post_images');
+    }
+
+    private function attachLegacyImages(Post $post): Post
+    {
+        if (! Schema::hasColumn('posts', 'image')) {
+            $post->setRelation('images', collect());
+
+            return $post;
+        }
+
+        $legacyImagePath = $post->getAttribute('image');
+
+        if (empty($legacyImagePath)) {
+            $post->setRelation('images', collect());
+
+            return $post;
+        }
+
+        $post->setRelation('images', collect([
+            new PostImage([
+                'image_url' => $legacyImagePath,
+                'is_thumbnail' => true,
+            ]),
+        ]));
+
+        return $post;
+    }
+
+    private function attachLegacyImagesToMany(Collection $posts): Collection
+    {
+        return $posts->map(function (Post $post): Post {
+            return $this->attachLegacyImages($post);
+        });
+    }
+
     // Lấy danh sách tất cả bài viết theo user
     public function byUser(int $user): JsonResponse
     {
@@ -31,13 +71,24 @@ class PostController extends Controller
                 ], 404);
             }
 
+            $hasPostImagesTable = $this->hasPostImagesTable();
+
             // Lấy tất cả bài viết của user theo user_id,
             // kèm thông tin tác giả và danh sách ảnh.
-            $posts = Post::query()
+            $query = Post::query()
                 ->where('user_id', $user)
-                ->with(['user:id,username,email,avatar', 'images'])
-                ->orderByDesc('id')
-                ->get();
+                ->with('user:id,username,email,avatar')
+                ->orderByDesc('id');
+
+            if ($hasPostImagesTable) {
+                $query->with('images');
+            }
+
+            $posts = $query->get();
+
+            if (! $hasPostImagesTable) {
+                $posts = $this->attachLegacyImagesToMany($posts);
+            }
 
             // Trả về danh sách bài viết theo format JSON chuẩn của API.
             return response()->json([
@@ -73,6 +124,12 @@ class PostController extends Controller
             $validated = $request->validated();
 
             $uploadedImages = $request->file('images', []);
+
+            // Ho tro schema cu gui 1 file qua field `image`.
+            if (empty($uploadedImages) && $request->hasFile('image')) {
+                $uploadedImages = [$request->file('image')];
+            }
+
             $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
 
             if ($thumbnailIndex >= count($uploadedImages)) {
@@ -81,14 +138,31 @@ class PostController extends Controller
                 ]);
             }
 
+            $hasPostImagesTable = $this->hasPostImagesTable();
+            $hasStatusColumn = Schema::hasColumn('posts', 'status');
+            $hasLegacyImageColumn = Schema::hasColumn('posts', 'image');
+
             // Dùng transaction để đảm bảo tạo post và images thành công cùng nhau.
-            $post = DB::transaction(function () use ($validated, $authUser, $uploadedImages, $thumbnailIndex) {
-                // Tạo bản ghi bài viết gốc.
-                $post = Post::query()->create([
+            $post = DB::transaction(function () use ($validated, $authUser, $uploadedImages, $thumbnailIndex, $hasPostImagesTable, $hasStatusColumn, $hasLegacyImageColumn) {
+                $postPayload = [
                     'user_id' => $authUser->id,
                     'caption' => $validated['caption'] ?? null,
-                    'status' => $validated['status'] ?? 'active',
-                ]);
+                ];
+
+                if ($hasStatusColumn) {
+                    $postPayload['status'] = $validated['status'] ?? 'active';
+                }
+
+                if (! $hasPostImagesTable && $hasLegacyImageColumn && isset($uploadedImages[$thumbnailIndex])) {
+                    $postPayload['image'] = $uploadedImages[$thumbnailIndex]->store('posts', 'public');
+                }
+
+                // Tạo bản ghi bài viết gốc.
+                $post = Post::query()->create($postPayload);
+
+                if (! $hasPostImagesTable) {
+                    return $post;
+                }
 
                 $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
 
@@ -115,11 +189,19 @@ class PostController extends Controller
                 return $post;
             });
 
+            $post = $post->load('user:id,username,email,avatar');
+
+            if ($hasPostImagesTable) {
+                $post->load('images');
+            } else {
+                $this->attachLegacyImages($post);
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Create post successful',
                 // Trả về kèm user và images để client không cần gọi thêm API.
-                'data' => $post->load(['user:id,username,email,avatar', 'images']),
+                'data' => $post,
             ], 201);
         } catch (ValidationException $e) {
             // Lỗi dữ liệu đầu vào.
@@ -142,10 +224,16 @@ class PostController extends Controller
     public function show(int $post): JsonResponse
     {
         try {
+            $hasPostImagesTable = $this->hasPostImagesTable();
+
             // Lấy chi tiết post cùng thông tin user và images.
-            $foundPost = Post::query()
-                ->with(['user:id,username,email,avatar', 'images'])
-                ->find($post);
+            $query = Post::query()->with('user:id,username,email,avatar');
+
+            if ($hasPostImagesTable) {
+                $query->with('images');
+            }
+
+            $foundPost = $query->find($post);
 
             // Không tìm thấy post thì trả 404 JSON.
             if (! $foundPost) {
@@ -153,6 +241,10 @@ class PostController extends Controller
                     'status' => 'fail',
                     'message' => 'Post not found',
                 ], 404);
+            }
+
+            if (! $hasPostImagesTable) {
+                $this->attachLegacyImages($foundPost);
             }
 
             return response()->json([
@@ -207,10 +299,17 @@ class PostController extends Controller
                 ], 403);
             }
 
-            $imagePaths = $foundPost->images()
-                ->pluck('image_url')
-                ->filter() //bỏ giá trị rỗng
-                ->all(); //thành mảng PHP
+            $hasPostImagesTable = $this->hasPostImagesTable();
+            $imagePaths = [];
+
+            if ($hasPostImagesTable) {
+                $imagePaths = $foundPost->images()
+                    ->pluck('image_url')
+                    ->filter() //bỏ giá trị rỗng
+                    ->all(); //thành mảng PHP
+            } elseif (Schema::hasColumn('posts', 'image') && ! empty($foundPost->image)) {
+                $imagePaths = [$foundPost->image];
+            }
 
             // Xóa post, các bản ghi phụ thuộc sẽ đi theo theo rule của foreign key.
             $foundPost->delete();

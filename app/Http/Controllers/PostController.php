@@ -83,7 +83,39 @@ class PostController extends Controller
             return $this->attachLegacyImages($post);
         });
     }
+    // Lấy danh sách tất cả bài viết
+    public function index(): JsonResponse
+    {
+        try {
+            $hasPostImagesTable = $this->hasPostImagesTable();
 
+            $query = Post::query()
+                ->with('user:id,username,email,avatar')
+                ->orderByDesc('id');
+
+            if ($hasPostImagesTable) {
+                $query->with('images');
+            }
+
+            $posts = $query->get();
+
+            if (! $hasPostImagesTable) {
+                $posts = $this->attachLegacyImagesToMany($posts);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Get all posts successful',
+                'data' => $posts,
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Get all posts failed',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
+    }
     // Lấy danh sách tất cả bài viết theo user
     public function byUser(int $user): JsonResponse
     {

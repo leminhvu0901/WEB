@@ -26,7 +26,8 @@ Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update'
 Route::delete('/users/{user}', [UserController::class, 'destroy']); //xóa
 
 // POSTS
-Route::get('/posts/{post}', [PostController::class, 'show']); // xem 1 bài viết cụ thể
+Route::get('/posts', [PostController::class, 'index']); // lấy tất cả bài viết
+Route::get('/posts/{post}', [PostController::class, 'show']); // xem 1 bài viết cụ thể
 Route::get('/users/{user}/posts', [PostController::class, 'byUser']); // xem tất cả bài viết của 1 user
 
 Route::middleware('auth:sanctum')->group(function () {

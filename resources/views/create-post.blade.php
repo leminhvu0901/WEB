@@ -216,6 +216,18 @@
     <div id="message" class="message"></div>
 
     <form id="createPostForm" class="grid">
+        <div>
+            <label for="token">Bearer Token (required)</label>
+            <input id="token" type="text" placeholder="Get token from /login API">
+        </div>
+
+        <div>
+            <label for="user_id">Select User</label>
+            <select id="user_id">
+                <option value="">Loading users...</option>
+            </select>
+        </div>
+
         <div class="col-span-2">
             <label for="caption">Caption</label>
             <textarea id="caption" placeholder="Write your caption here..."></textarea>
@@ -256,8 +268,32 @@
     const messageEl = document.getElementById("message");
     const captionInput = document.getElementById("caption");
     const fileInfo = document.getElementById("fileInfo");
+    const tokenInput = document.getElementById("token");
+    const userIdSelect = document.getElementById("user_id");
 
     let editPostId = null;
+    let allUsers = [];
+
+    // Load users list
+    async function loadUsers() {
+        try {
+            const response = await fetch(`${API_BASE}/users`);
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                allUsers = data.data || [];
+                const options = allUsers.map(user =>
+                    `<option value="${user.id}">${user.username} (ID: ${user.id})</option>`
+                ).join('');
+                userIdSelect.innerHTML = `<option value="">Select a user</option>${options}`;
+            } else {
+                userIdSelect.innerHTML = '<option value="">Failed to load users</option>';
+            }
+        } catch (error) {
+            userIdSelect.innerHTML = '<option value="">Error loading users</option>';
+            console.error('Error loading users:', error);
+        }
+    }
 
     imageInput.addEventListener("change", function () {
         const file = imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
@@ -281,6 +317,7 @@
             if (data.status === 'success') {
                 const post = data.data;
                 captionInput.value = post.caption || '';
+                userIdSelect.value = post.user_id || '';
 
                 if (post.image_url) {
                     imagePreview.src = post.image_url;
@@ -298,8 +335,20 @@
     form.addEventListener("submit", async function (event) {
         event.preventDefault();
 
+        const token = tokenInput.value.trim();
+        const userId = userIdSelect.value.trim();
         const caption = captionInput.value.trim();
         const image = imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
+
+        if (!token) {
+            showMessage('Please enter bearer token', 'error');
+            return;
+        }
+
+        if (!userId) {
+            showMessage('Please select a user', 'error');
+            return;
+        }
 
         if (!caption && !image) {
             showMessage('Please write a caption or upload an image', 'error');
@@ -319,7 +368,7 @@
 
         const headers = {
             "Accept": "application/json",
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+            "Authorization": "Bearer " + token,
         };
 
         try {
@@ -366,6 +415,7 @@
 
     // Check if editing an existing post
     document.addEventListener('DOMContentLoaded', function () {
+        loadUsers();
         editPostId = sessionStorage.getItem('editPostId');
         if (editPostId) {
             loadPostForEdit(editPostId);

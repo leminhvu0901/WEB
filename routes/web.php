@@ -21,5 +21,6 @@ Route::get('/', function () {
     ]);
 });
 
+Route::view('/list-users', 'list-users');
 Route::view('/update-user', 'update-user');
 

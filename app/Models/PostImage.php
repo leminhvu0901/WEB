@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 // Model dai dien cho bang `post_images`.
 class PostImage extends Model
@@ -26,6 +27,25 @@ class PostImage extends Model
     protected $casts = [
         'is_thumbnail' => 'boolean',
     ];
+
+    protected $appends = [
+        'public_url',
+    ];
+
+    public function getPublicUrlAttribute(): ?string
+    {
+        $path = $this->attributes['image_url'] ?? null;
+
+        if (empty($path)) {
+            return null;
+        }
+
+        if (preg_match('/^https?:\/\//i', $path)) {
+            return $path;
+        }
+
+        return Storage::url($path);
+    }
 
     // Moi anh thuoc ve 1 bai viet (post_images.post_id -> posts.id).
     public function post(): BelongsTo

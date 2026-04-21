@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use App\Support\StoresOriginalFileNames;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,26 +14,33 @@ use Throwable;
 
 class AuthController extends Controller
 {
+    use StoresOriginalFileNames;
+
     // Hàm đăng ký user
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
             $validated = $request->validated();
 
-            $avatarPath = null;
-            if ($request->hasFile('avatar')) {
-                $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            }
-
             $user = User::create([
                 'username' => $validated['username'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
-                'avatar' => $avatarPath,
+                'avatar' => null,
                 'role' => 'user',
                 'phone' => $validated['phone'] ?? null,
                 'address' => $validated['address'] ?? null,
             ]);
+
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $this->storePublicFileWithOriginalName(
+                    $request->file('avatar'),
+                    'uploads/avatars/user-'.$user->id
+                );
+
+                $user->forceFill(['avatar' => $avatarPath])->save();
+                $user->refresh();
+            }
 
             $token = $user->createToken('auth_token')->plainTextToken;
 

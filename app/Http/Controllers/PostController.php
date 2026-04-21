@@ -5,22 +5,50 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Post\StorePostRequest;
 use App\Models\Post;
 use App\Models\PostImage;
+use App\Support\StoresOriginalFileNames;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class PostController extends Controller
 {
+    use StoresOriginalFileNames;
+
     private function hasPostImagesTable(): bool
     {
         return Schema::hasTable('post_images');
+    }
+
+    private function postImageDirectory(int $postId): string
+    {
+        return 'uploads/posts/post-'.$postId;
+    }
+
+    private function createPostCompatible(array $payload): Post
+    {
+        try {
+            return Post::query()->create($payload);
+        } catch (QueryException $e) {
+            // Legacy schema may define `posts.id` without AUTO_INCREMENT.
+            if (! str_contains($e->getMessage(), "Field 'id' doesn't have a default value")) {
+                throw $e;
+            }
+
+            $nextId = ((int) Post::query()->max('id')) + 1;
+            Post::query()->insert(['id' => $nextId] + $payload);
+
+            /** @var Post $created */
+            $created = Post::query()->findOrFail($nextId);
+
+            return $created;
+        }
     }
 
     private function attachLegacyImages(Post $post): Post
@@ -153,35 +181,40 @@ class PostController extends Controller
                     $postPayload['status'] = $validated['status'] ?? 'active';
                 }
 
-                if (! $hasPostImagesTable && $hasLegacyImageColumn && isset($uploadedImages[$thumbnailIndex])) {
-                    $postPayload['image'] = $uploadedImages[$thumbnailIndex]->store('posts', 'public');
-                }
-
                 // Tạo bản ghi bài viết gốc.
-                $post = Post::query()->create($postPayload);
+                $post = $this->createPostCompatible($postPayload);
 
                 if (! $hasPostImagesTable) {
+                    if ($hasLegacyImageColumn && isset($uploadedImages[$thumbnailIndex])) {
+                        $post->forceFill([
+                            'image' => $this->storePublicFileWithOriginalName(
+                                $uploadedImages[$thumbnailIndex],
+                                $this->postImageDirectory($post->id)
+                            ),
+                        ])->save();
+                    }
+
                     return $post;
                 }
 
                 $hasThumbnailColumn = Schema::hasColumn('post_images', 'is_thumbnail');
 
                 // Chuẩn hóa mảng file ảnh về format createMany().
-                $images = array_map(
-                    static function (UploadedFile $imageFile, int $index) use ($thumbnailIndex, $hasThumbnailColumn): array {
-                        $row = [
-                            'image_url' => $imageFile->store('posts', 'public'),
-                        ];
+                $images = [];
+                foreach ($uploadedImages as $index => $imageFile) {
+                    $row = [
+                        'image_url' => $this->storePublicFileWithOriginalName(
+                            $imageFile,
+                            $this->postImageDirectory($post->id)
+                        ),
+                    ];
 
-                        if ($hasThumbnailColumn) {
-                            $row['is_thumbnail'] = $index === $thumbnailIndex;
-                        }
+                    if ($hasThumbnailColumn) {
+                        $row['is_thumbnail'] = (int) $index === (int) $thumbnailIndex;
+                    }
 
-                        return $row;
-                    },
-                    $uploadedImages,
-                    array_keys($uploadedImages)
-                );
+                    $images[] = $row;
+                }
 
                 // Tạo toàn bộ ảnh liên kết với post.
                 $post->images()->createMany($images);

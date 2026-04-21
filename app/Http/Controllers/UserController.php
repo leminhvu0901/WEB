@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Support\StoresOriginalFileNames;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class UserController extends Controller
 {
+    use StoresOriginalFileNames;
+
     // get data danh sách tất cả users
     public function index(): JsonResponse
     {
@@ -80,7 +83,10 @@ class UserController extends Controller
                     Storage::disk('public')->delete($user->avatar);
                 }
 
-                $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
+                $validated['avatar'] = $this->storePublicFileWithOriginalName(
+                    $request->file('avatar'),
+                    'uploads/avatars/user-'.$user->id
+                );
             } else {
                 unset($validated['avatar']);
             }

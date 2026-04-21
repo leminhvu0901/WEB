@@ -320,6 +320,14 @@
             }
         }
 
+        function getImageUrl(urlPath) {
+            if (!urlPath) return null;
+            if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
+                return urlPath;
+            }
+            return API_BASE + urlPath;
+        }
+
         function renderPosts(posts) {
             const container = document.getElementById('postsContainer');
             const noneData = document.getElementById('noneData');
@@ -331,12 +339,15 @@
             }
 
             noneData.style.display = 'none';
-            container.innerHTML = `<div class="posts-grid">${posts.map(post => `
+            container.innerHTML = `<div class="posts-grid">${posts.map(post => {
+                const postImageUrl = post.image_url || (post.images && post.images.length > 0 ? (post.images[0].public_url || post.images[0].image_url) : null);
+                const userAvatarUrl = post.user?.avatar_url;
+                return `
                 <div class="post-card">
-                    ${post.image_url ? `<img src="${API_BASE}${post.image_url}" alt="Post" class="post-image">` : '<div class="post-image" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;"><span style="color: #9ca3af;">No image</span></div>'}
+                    ${postImageUrl ? `<img src="${getImageUrl(postImageUrl)}" alt="Post" class="post-image">` : '<div class="post-image" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;"><span style="color: #9ca3af;">No image</span></div>'}
                     <div class="post-content">
                         <div class="post-author">
-                            ${post.user && post.user.avatar_url ? `<img src="${API_BASE}${post.user.avatar_url}" alt="${post.user.username}" class="post-author-avatar">` : '<div class="post-author-avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 10px;">No</span></div>'}
+                            ${post.user && userAvatarUrl ? `<img src="${getImageUrl(userAvatarUrl)}" alt="${post.user.username}" class="post-author-avatar">` : '<div class="post-author-avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 10px;">No</span></div>'}
                             <div class="post-author-info">
                                 <h4>${escapeHtml(post.user?.username || 'Unknown')}</h4>
                                 <p>${formatDate(post.created_at)}</p>
@@ -349,7 +360,7 @@
                         </div>
                     </div>
                 </div>
-            `).join('')}</div>`;
+            `}).join('')}</div>`;
         }
 
         function filterPosts() {

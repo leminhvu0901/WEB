@@ -329,6 +329,14 @@
             }
         }
 
+        function getImageUrl(urlPath) {
+            if (!urlPath) return null;
+            if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
+                return urlPath;
+            }
+            return API_BASE + urlPath;
+        }
+
         function renderUsers(users) {
             const usersList = document.getElementById('usersList');
             const noneData = document.getElementById('noneData');
@@ -344,7 +352,7 @@
                 <tr>
                     <td>
                         <div class="user-info">
-                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.username}" class="avatar">` : '<div class="avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 12px;">No avatar</span></div>'}
+                            ${user.avatar_url ? `<img src="${getImageUrl(user.avatar_url)}" alt="${user.username}" class="avatar">` : '<div class="avatar" style="background: #d1d5db; display: flex; align-items: center; justify-content: center;"><span style="color: #6b7280; font-size: 12px;">No avatar</span></div>'}
                             <div class="user-info-text">
                                 <h4>${escapeHtml(user.username)}</h4>
                                 <p>${escapeHtml(user.email)}</p>

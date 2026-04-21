@@ -166,7 +166,7 @@
     <form id="updateUserForm" class="grid">
         <div class="col-span-2">
             <label for="endpoint">API endpoint</label>
-            <input id="endpoint" type="text" value="http://127.0.0.1:8000/users/{id}">
+            <input id="endpoint" type="text" value="https://web-pgb0.onrender.com/users/{id}">
         </div>
 
         <div>
@@ -284,14 +284,14 @@
         const value = rawValue.replace(/^\/+/, "");
 
         if (value.startsWith("storage/")) {
-            return "http://127.0.0.1:8000/" + value;
+            return "https://web-pgb0.onrender.com/" + value;
         }
 
         if (value.startsWith("avatars/")) {
-            return "http://127.0.0.1:8000/storage/" + value;
+            return "https://web-pgb0.onrender.com/storage/" + value;
         }
 
-        return "http://127.0.0.1:8000/" + value;
+        return "https://web-pgb0.onrender.com/" + value;
     }
 
     function buildEndpoint(rawEndpoint, userId) {

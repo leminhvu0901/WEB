@@ -192,7 +192,7 @@ class PostController extends Controller
 
             $thumbnailIndex = $validated['thumbnail_index'] ?? 0;
 
-            if ($thumbnailIndex >= count($uploadedImages)) {
+            if (!empty($uploadedImages) && $thumbnailIndex >= count($uploadedImages)) {
                 throw ValidationException::withMessages([
                     'thumbnail_index' => ['Thumbnail index is out of range.'],
                 ]);

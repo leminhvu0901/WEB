@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 // Model dai dien cho bang `post_images`.
@@ -44,7 +45,10 @@ class PostImage extends Model
             return $path;
         }
 
-        return Storage::url($path);
+        /** @var FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+
+        return $publicDisk->url($path);
     }
 
     // Moi anh thuoc ve 1 bai viet (post_images.post_id -> posts.id).

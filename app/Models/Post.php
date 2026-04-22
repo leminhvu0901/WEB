@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 // Model dai dien cho bang `posts` trong database.
@@ -42,7 +43,10 @@ class Post extends Model
             return $imagePath;
         }
 
-        return Storage::url($imagePath);
+        /** @var FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+
+        return $publicDisk->url($imagePath);
     }
 
     // Moi bai viet thuoc ve 1 user (posts.user_id -> users.id).

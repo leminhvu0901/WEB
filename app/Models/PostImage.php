@@ -45,10 +45,7 @@ class PostImage extends Model
             return $path;
         }
 
-        /** @var FilesystemAdapter $publicDisk */
-        $publicDisk = Storage::disk('public');
-
-        return $publicDisk->url($path);
+        return Storage::url($path);
     }
 
     // Moi anh thuoc ve 1 bai viet (post_images.post_id -> posts.id).

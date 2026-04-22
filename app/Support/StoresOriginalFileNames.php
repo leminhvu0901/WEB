@@ -8,7 +8,7 @@ trait StoresOriginalFileNames
 {
     protected function storePublicFileWithOriginalName(UploadedFile $file, string $directory): string
     {
-        return $file->storeAs($directory, $this->sanitizeUploadedFileName($file), 'public');
+        return $file->storeAs($directory, $this->sanitizeUploadedFileName($file), config('filesystems.default'));
     }
 
     protected function sanitizeUploadedFileName(UploadedFile $file): string

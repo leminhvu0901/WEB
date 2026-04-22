@@ -37,4 +37,4 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 
 EXPOSE 10000
 
-CMD sh -c "php artisan optimize:clear && php artisan storage:link && php artisan migrate --path=database/migrations/2026_03_16_100000_fix_invisible_primary_keys_project_tables.php --force && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"
+CMD sh -c "php artisan optimize:clear && php artisan migrate --path=database/migrations/2026_03_16_100000_fix_invisible_primary_keys_project_tables.php --force && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"
